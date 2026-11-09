@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EDTracker Pro Tool</title>
+<style>
+:root{
+  --bg:#f4f3ef; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a64; --line:#dcdad2;
+  --accent:#0b6e4f; --accent-ink:#ffffff; --warn:#b5581a; --bad:#b3261e; --ok:#0b6e4f;
+  --pt-raw:#c2410c; --pt-cal:#0e7490; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151614; --panel:#1e201d; --ink:#ecebe6; --muted:#9a998f; --line:#33352f;
+    --accent:#3fb68b; --accent-ink:#0d1a14; --warn:#e39a5b; --bad:#ef6f66; --ok:#3fb68b;
+    --pt-raw:#f08a4b; --pt-cal:#4cc3dd;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151614; --panel:#1e201d; --ink:#ecebe6; --muted:#9a998f; --line:#33352f;
+  --accent:#3fb68b; --accent-ink:#0d1a14; --warn:#e39a5b; --bad:#ef6f66; --ok:#3fb68b;
+  --pt-raw:#f08a4b; --pt-cal:#4cc3dd;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;letter-spacing:.2px}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+main{max-width:1500px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){
+  main.app{grid-template-columns:minmax(330px,0.85fr) minmax(0,1.3fr);height:calc(100vh - 71px);grid-template-rows:auto minmax(0,1fr)}
+  main.app > .banner{grid-row:1}
+  .headpanel,.tabspanel{grid-row:2;min-height:0}
+  .tabspanel{display:flex;flex-direction:column}
+  .panes{flex:1;min-height:0;overflow:auto}
+  .headpanel{display:flex;flex-direction:column}
+  #head{flex:1;min-height:260px;height:auto!important}
+  #log{height:calc(100vh - 230px)!important}
+}
+@media (max-width:899px){ #head{height:300px} }
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;border-radius:0;padding:6px 12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+body.mode-receiver .only-tracker{display:none!important}
+body:not(.mode-receiver) .only-receiver{display:none!important}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px -4px 14px;padding:0 4px;overflow-x:auto}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;padding:9px 14px;color:var(--muted);font-weight:500;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button:hover{border-color:transparent;border-bottom-color:var(--line);color:var(--ink)}
+.tabs button[aria-selected="true"]:hover{border-bottom-color:var(--accent)}
+.block + .block{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+main.app > .banner:not([hidden]) ~ .headpanel, main.app > .banner:not([hidden]) ~ .tabspanel{grid-row:2}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.span2{grid-column:1/-1}
+button,select,input{font:inherit;color:inherit}
+button{background:transparent;border:1px solid var(--line);border-radius:7px;padding:7px 12px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--ink)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+select,input[type=number]{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 8px;max-width:100%}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--mono)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;border:1px solid var(--line);font-size:13px;font-family:var(--mono)}
+.pill.ok{color:var(--ok);border-color:var(--ok)} .pill.warn{color:var(--warn);border-color:var(--warn)} .pill.bad{color:var(--bad);border-color:var(--bad)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+.steps{list-style:none;margin:0 0 12px;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.steps li{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.steps li.on{border-color:var(--accent);color:var(--accent)}
+.steps li.done{color:var(--ink)}
+.wiz-text{min-height:3.2em;margin:0 0 12px}
+progress{width:100%;height:14px;accent-color:var(--accent)}
+canvas{width:100%;height:340px;display:block;border-radius:8px;background:color-mix(in srgb,var(--bg) 60%,var(--panel));touch-action:none}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gauge{font-family:var(--mono);font-size:13px}
+.gauge .bar{height:6px;background:var(--line);border-radius:3px;position:relative;margin-top:3px;overflow:hidden}
+.gauge .bar i{position:absolute;top:0;bottom:0;background:var(--accent);left:50%;width:2px}
+.form{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center}
+.form label{color:var(--muted);font-size:14px}
+#log{font-family:var(--mono);font-size:12px;height:150px;overflow:auto;white-space:pre-wrap;color:var(--muted);margin:0}
+.banner{padding:10px 12px;border-radius:8px;border:1px solid var(--warn);color:var(--warn);margin-bottom:12px}
+details summary{cursor:pointer;color:var(--muted)}
+table.mat{border-collapse:collapse;font-family:var(--mono);font-size:13px}
+table.mat td{padding:2px 8px;text-align:right}
+</style>
+</head>
+<body>
+<header>
+  <h1>EDTracker Pro Tool</h1>
+  <div class="row">
+    <div id="modeSwitch" class="seg" hidden role="group" aria-label="Mode">
+      <button data-mode="tracker" title="This PC has the EDTracker plugged in">Tracker</button>
+      <button data-mode="receiver" title="Receive head data over the network (e.g. on a Shadow PC)">Receiver</button>
+    </div>
+    <span id="connPill" class="pill">not connected</span>
+    <button id="btnConnect" class="primary">Connect tracker</button>
+    <button id="btnDisconnect" disabled>Disconnect</button>
+  </div>
+</header>
+
+<main class="app">
+  <div id="noHid" class="banner span2" hidden>This browser doesn't support WebHID. Open this page in Chrome or Edge on a desktop computer.</div>
+  <section class="panel headpanel">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">Head</h2>
+      <div class="row" style="gap:6px"><span id="hStatus" class="pill">–</span><span id="hBatt" class="pill" hidden>–</span></div>
+    </div>
+    <canvas id="head"></canvas>
+    <div class="row muted mono" style="justify-content:space-between;font-size:13px;margin-top:6px">
+      <span id="headYaw">yaw –</span><span id="headPitch">pitch –</span><span id="headRoll">roll –</span>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="btnRecentre2" class="primary" disabled>Recentre</button>
+      <button id="btnLevel" disabled title="Tracker flat on the desk and still: sets level (full gyro + accel bias)">Set level</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span class="muted" style="font-size:13px">Invert in view:</span>
+      <label class="muted" style="font-size:13px"><input type="checkbox" class="inv" data-ax="0"> yaw</label>
+      <label class="muted" style="font-size:13px"><input type="checkbox" class="inv" data-ax="1" checked> pitch</label>
+      <label class="muted" style="font-size:13px"><input type="checkbox" class="inv" data-ax="2"> roll</label>
+    </div>
+  </section>
+  <section class="panel tabspanel">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="cal">Calibrate</button>
+      <button role="tab" data-tab="set">Settings</button>
+      <button role="tab" data-tab="hk" id="tabHotkeys" hidden>Hotkeys</button>
+      <button role="tab" data-tab="out" id="tabOutput" hidden>Output</button>
+      <button role="tab" data-tab="dev">Device</button>
+      <button role="tab" data-tab="log">Log</button>
+    </nav>
+    <div class="panes">
+    <div class="pane" data-pane="cal" role="tabpanel" hidden>
+  <div class="block">
+    <h2>Calibration wizard</h2>
+    <ol class="steps" id="steps">
+      <li data-s="flat">1 Flat &amp; still</li>
+      <li data-s="mount">2 Mount</li>
+      <li data-s="upright">3 Upright</li>
+      <li data-s="rotate">4 Rotate</li>
+      <li data-s="done">5 Done</li>
+    </ol>
+    <p id="wizText" class="wiz-text">Connect the tracker (or its wireless dongle) to begin.</p>
+    <div id="wizOrient" class="row" hidden style="margin-bottom:12px">
+      <label for="selWizOrient" class="muted">Mounting:</label>
+      <select id="selWizOrient"></select>
+    </div>
+    <div id="wizProgress" hidden style="margin-bottom:12px">
+      <progress id="prog" max="900" value="0"></progress>
+      <div class="row muted" style="justify-content:space-between;font-size:13px;margin-top:4px">
+        <span id="progTxt">0 / 900 points</span><span id="rangeTxt" class="mono"></span>
+      </div>
+    </div>
+    <div class="row">
+      <button id="btnWizBack" disabled>Back</button>
+      <button id="btnWizNext" class="primary" disabled>Start</button>
+      <button id="btnWizFinishEarly" hidden>Fit now</button>
+      <span class="muted" style="font-size:13px">Fit method</span>
+      <select id="selMethod">
+        <option value="ellipsoid">Ellipsoid (recommended)</option>
+        <option value="kiss">Standard (min/max)</option>
+      </select>
+    </div>
+  </div>
+  <div class="block">
+    <h2>Magnetometer cloud</h2>
+    <canvas id="cloud"></canvas>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--pt-raw)"></i>raw samples</span>
+      <span><i class="dot" style="background:var(--pt-cal)"></i>after correction</span>
+      <span id="fitQuality"></span>
+    </div>
+  </div>
+    </div>
+    <div class="pane" data-pane="set" role="tabpanel" hidden>
+  <div class="block">
+    <h2>Settings</h2>
+    <div class="form">
+      <label for="selOrient">Orientation</label><select id="selOrient"></select>
+      <label for="selMode">Response</label>
+      <select id="selMode"><option value="0">Linear</option><option value="1">Exponential</option></select>
+      <label for="inYaw">Yaw scale</label><div class="row" style="flex-wrap:nowrap"><input id="inYaw" type="range" step="0.25" min="1" max="10" style="flex:1;min-width:0;accent-color:var(--accent)"><span id="vYaw" class="mono" style="min-width:3.5em;text-align:right">–</span></div>
+      <label for="inPitch">Pitch scale</label><div class="row" style="flex-wrap:nowrap"><input id="inPitch" type="range" step="0.25" min="1" max="10" style="flex:1;min-width:0;accent-color:var(--accent)"><span id="vPitch" class="mono" style="min-width:3.5em;text-align:right">–</span></div>
+      <label for="inRoll">Roll scale</label><div class="row" style="flex-wrap:nowrap"><input id="inRoll" type="range" step="0.25" min="1" max="10" style="flex:1;min-width:0;accent-color:var(--accent)"><span id="vRoll" class="mono" style="min-width:3.5em;text-align:right">–</span>
+        <label class="muted" style="font-size:13px;white-space:nowrap"><input type="checkbox" id="rollOff"> off</label></div>
+      <label for="selOutput">Output</label><select id="selOutput"><option value="0">On</option><option value="1">Off</option></select>
+      <label for="inSmooth">Smoothing</label><input id="inSmooth" type="number" step="1" min="0" max="99">
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnSaveCfg" class="primary" disabled>Save to tracker</button>
+      <button id="btnReloadCfg" disabled>Reload</button>
+    </div>
+    <details style="margin-top:14px">
+      <summary>Stored calibration</summary>
+      <div style="margin-top:8px">
+        <div class="muted" style="font-size:13px">Offsets</div>
+        <div id="dOffsets" class="mono">–</div>
+        <div class="muted" style="font-size:13px;margin-top:6px">Soft-iron matrix (raw)</div>
+        <table class="mat" id="dMatrix"></table>
+        <div class="row" style="margin-top:10px">
+          <button id="btnBackup" disabled>Back up to file</button>
+          <button id="btnRestore" disabled>Restore from file…</button>
+          <input id="fileRestore" type="file" accept=".json,application/json" hidden>
+        </div>
+      </div>
+    </details>
+  </div>
+    </div>
+    <div class="pane" data-pane="hk" role="tabpanel" hidden>
+  <div class="block" id="hotkeyPanel">
+    <h2>Hotkeys</h2>
+    <div class="form">
+      <label>Recentre</label>
+      <div class="row"><span id="hkRecentre" class="pill">Not set</span><button data-cap="recentre">Assign…</button><button data-clear="recentre">Clear</button></div>
+      <label>Toggle output</label>
+      <div class="row"><span id="hkToggle" class="pill">Not set</span><button data-cap="toggle">Assign…</button><button data-clear="toggle">Clear</button></div>
+      <label for="hkSound">Beep on hotkey</label><div><input type="checkbox" id="hkSound"></div>
+      <label>Administrator</label>
+      <div>
+        <div class="row"><span id="adminState" class="pill">–</span><button id="btnAdmin">Restart as administrator</button></div>
+        <label class="muted" style="font-size:13px;display:block;margin-top:6px"><input type="checkbox" id="hkAlwaysAdmin"> Always start as administrator</label>
+      </div>
+    </div>
+    <p class="muted" style="font-size:13px;margin:12px 0 0">The hotkey turns green while it's held, and each trigger is logged. Hotkeys work while Elite Dangerous has focus, from the keyboard or any joystick/HOTAS button. If Elite (or its launcher) runs as administrator, this tool must too, or Windows hides the key presses from it.</p>
+  </div>
+    </div>
+    <div class="pane" data-pane="out" role="tabpanel" hidden>
+  <div class="block">
+    <h2>Output to games</h2>
+    <div class="form">
+      <label class="only-tracker">Joystick</label><div class="muted only-tracker" style="font-size:14px">always on (it's how the tracker appears to Windows)</div>
+      <label class="only-receiver" for="rxPort">Receive</label>
+      <div class="only-receiver">
+        <div class="row"><span class="muted">UDP port</span><input id="rxPort" type="number" min="1" max="65535" value="4242" style="width:90px"><button id="rxApply">Apply</button></div>
+        <div style="margin-top:6px"><span id="rxStatus" class="pill">–</span></div>
+      </div>
+      <label class="only-receiver" for="vjOn">vJoy</label>
+      <div class="only-receiver">
+        <div class="row"><label><input type="checkbox" id="vjOn"> virtual joystick, device</label>
+          <select id="vjId"></select>
+          <span class="muted">axes</span>
+          <select id="vjAxes"><option value="xyz">X / Y / Z</option><option value="rxryrz">Rx / Ry / Rz</option></select></div>
+        <div style="margin-top:6px"><span id="vjStatus" class="pill">off</span></div>
+      </div>
+      <label for="ftOn">FreeTrack / TrackIR</label>
+      <div class="row"><label><input type="checkbox" id="ftOn"> on this PC</label><span id="ftStatus" class="pill">off</span></div>
+      <label class="only-tracker" for="udpOn">UDP over network</label>
+      <div class="only-tracker">
+        <div class="row"><label><input type="checkbox" id="udpOn"> send to</label>
+          <input id="udpHost" type="text" placeholder="100.x.x.x or machine name" style="flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 8px">
+          <span class="muted">port</span><input id="udpPort" type="number" min="1" max="65535" value="4242" style="width:90px">
+          <button id="udpApply">Apply</button></div>
+        <div style="margin-top:6px"><span id="udpStatus" class="pill">off</span></div>
+      </div>
+      <label for="rollOff2">Roll</label>
+      <div><label><input type="checkbox" id="rollOff2"> ignore head roll</label> <span class="muted" style="font-size:13px">(sends roll as 0 to FreeTrack, UDP and vJoy)</span></div>
+      <label>Invert (games)</label>
+      <div class="row" style="gap:14px">
+        <label><input type="checkbox" class="ftinv" data-ax="0"> yaw</label>
+        <label><input type="checkbox" class="ftinv" data-ax="1"> pitch</label>
+        <label><input type="checkbox" class="ftinv" data-ax="2"> roll</label>
+      </div>
+      <label for="ftDummy">Dummy TrackIR.exe</label>
+      <div><label class="muted" style="font-size:13px"><input type="checkbox" id="ftDummy"> run it (some games only look for head tracking when a process called TrackIR.exe is running)</label></div>
+    </div>
+    <div class="muted" style="font-size:13px;margin-top:14px;line-height:1.55">
+      <p class="only-receiver" style="margin:0 0 8px"><b>Receiver mode</b> takes head data from this tool in Tracker mode on another PC, or from OpenTrack's "UDP over network" output, so you don't need OpenTrack here. Windows may ask to allow this tool through the firewall the first time: allow it on private networks (Tailscale counts as one). Recentre here (button or hotkey) asks the sending PC to recentre the tracker itself, so offsets never build up. If the sender is OpenTrack or an older version of this tool, it recentres the received data here instead. Recentre on the sending PC also works.</p>
+      <p class="only-receiver" style="margin:0 0 8px"><b>vJoy</b> presents yaw, pitch and roll as a virtual joystick (±180° across each axis, the same scaling as the EDTracker's own joystick). In Elite, bind head look to the vJoy axes. Use either vJoy or FreeTrack/TrackIR for Elite, not both. The vJoy device must have the chosen axes enabled in "Configure vJoy".</p>
+      <p style="margin:0 0 8px"><b>FreeTrack / TrackIR</b> publishes the angles the same way OpenTrack does, so games with TrackIR support on this PC (Elite Dangerous included) pick it up as head tracking.</p>
+      <p class="only-tracker" style="margin:0 0 8px"><b>UDP over network</b> sends the same data as OpenTrack's "UDP over network" output: six numbers per update, about 60 times a second. On the other machine (a Shadow PC over Tailscale, say), run OpenTrack with input <i>UDP over network</i> on the same port and output <i>freetrack 2.0 Enhanced</i>. Use that machine's Tailscale address (100.x.x.x) or its MagicDNS name. Allow OpenTrack through the Windows firewall there.</p>
+      <p class="only-tracker" style="margin:0 0 8px">The invert options apply to both outputs. Recentre (button or hotkey) resets the tracker itself, so it works from here even while you're in the remote session.</p>
+      <p style="margin:0 0 8px">In Elite: remove the joystick axes bound to head look, so the tracker isn't read twice, and make sure head tracking is enabled in the controls. Start this tool before the game.</p>
+      <p style="margin:0">Don't run OpenTrack's FreeTrack output at the same time; they use the same channel. The client DLLs are OpenTrack's (ISC licence), copied to <span class="mono">%LOCALAPPDATA%\EDTrackerProTool\ftclient</span>.</p>
+    </div>
+  </div>
+    </div>
+    <div class="pane" data-pane="dev" role="tabpanel" hidden>
+  <div class="block">
+    <h2>Device</h2>
+    <dl class="kv">
+      <dt>Product</dt><dd id="dProduct">–</dd>
+      <dt>USB ID</dt><dd id="dUsb">–</dd>
+      <dt>Firmware</dt><dd id="dFw">–</dd>
+      <dt>Status</dt><dd><span id="dStatus" class="pill">–</span></dd>
+      <dt>RF channel</dt><dd id="dChan">–</dd>
+      <dt>Message rate</dt><dd id="dRf">–</dd>
+      <dt>Battery</dt><dd id="dBatt">–</dd>
+      <dt>Mag heading</dt><dd id="dHeading">–</dd>
+      <dt>Heading noise</dt><dd id="dStd">–</dd>
+      <dt>Accel (g)</dt><dd id="dAcc">–</dd>
+      <dt>Tilt from level</dt><dd id="dTilt">–</dd>
+      <dt>Gyro (raw)</dt><dd id="dGyro">–</dd>
+      <dt>Mag (raw)</dt><dd id="dMagRaw">–</dd>
+    </dl>
+    <div style="margin-top:14px" class="grid3" id="gauges"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnRecentre" disabled>Recentre</button>
+      <button id="btnBias" disabled title="Keep tracker flat and still">Gyro bias</button>
+      <button id="btnFullBias" disabled title="Gyro + accelerometer, tracker flat and still">Full bias</button>
+      <button id="btnOutput" disabled>Output: on</button>
+    </div>
+  </div>
+    </div>
+    <div class="pane" data-pane="log" role="tabpanel" hidden>
+  <div class="block">
+    <h2>Log</h2>
+    <pre id="log"></pre>
+  </div>
+    </div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+/* ============================================================
+   Protocol — recovered from EDTrackerPro.exe (EDTrackerUI5.Dongle)
+   All traffic is HID feature reports, little-endian packed structs.
+   ============================================================ */
+const RID = { JOY:1, CONFIG:2, MAG:3, CMD:4, AUX:5, CHANNEL:6, SCAN:7 };
+const CMD = { RECENTER:1, AUTO_BIAS:2, GET_CONFIG:3, FULL_BIAS:9, SCAN_CHANNELS:6,
+              FULL_DATA_OUT:12, MIN_DATA_OUT:13, OUTPUT_OFF:14, OUTPUT_ON:15 };
+const STATUS = ["BIAS","RECENTRE","RUNNING","SLEEPING","NO SIGNAL","UNPAIRED"];
+const FILTERS = [
+  {vendorId:0x16D0, productId:0x0AEA}, {vendorId:0x16D0, productId:0x0AEB},
+  {vendorId:0x16D0, productId:0x0AEC}, {vendorId:0x16D0, productId:0x0C41},
+  {vendorId:0x16D0, productId:0x0C42}, {vendorId:0x1915, productId:0x9005},
+  {vendorId:0x03EB, productId:0x2044},
+];
+const WIRED_PIDS = [0x0AEA, 0x0AEB, 0x2044, 0x0C42];
+const ORIENTS = ["On top, USB pointing right","On top, USB pointing forwards","On top, USB pointing left","On top, USB pointing backwards","Left side, USB pointing down","Right side, USB pointing down"];
+const MAG_TARGET = 900;           // samples, as original
+const MAG_BUF = 2000;
+const MAG_SENS = 10;              // original default: accept if angle*5 > 10 → >2° between samples
+
+/* ---------- struct codecs (payload excludes report ID) ---------- */
+function decodeAux(dv){
+  const i16=o=>dv.getInt16(o,true), u16=o=>dv.getUint16(o,true), u8=o=>dv.getUint8(o);
+  return { gyro:[i16(0),i16(2),i16(4)], accel:[i16(6),i16(8),i16(10)], magRaw:[i16(12),i16(14),i16(16)],
+    voltage:u16(18), magHeading:u16(20), chargeStatus:u8(22), deviceStatus:u8(23), rfCount:u8(24),
+    calAvail:u8(25), rawMagAvail:u8(26), orientAvail:u8(27), chanAvail:u8(28), sessionID:u8(29) };
+}
+function decodeConfig(dv){
+  const u8=o=>dv.getUint8(o);
+  return { version:u8(0), rollScale:u8(1), expRollScale:u8(2), outputOff:u8(3), orientation:u8(4),
+    scaleMode:u8(5), yawScale:u8(6), pitchScale:u8(7), expYawScale:u8(8), expPitchScale:u8(9),
+    LPF:dv.getUint16(10,true), channel:u8(12) };
+}
+function encodeConfig(c, size){
+  const b=new Uint8Array(Math.max(size,13)), dv=new DataView(b.buffer);
+  [c.version,c.rollScale,c.expRollScale,c.outputOff,c.orientation,c.scaleMode,c.yawScale,c.pitchScale,c.expYawScale,c.expPitchScale]
+    .forEach((v,i)=>dv.setUint8(i,v&255));
+  dv.setUint16(10,c.LPF,true); dv.setUint8(12,c.channel&255);
+  return b;
+}
+function decodeMag(dv){
+  const a=(o,n)=>Array.from({length:n},(_,i)=>dv.getInt16(o+2*i,true));
+  return { seq:dv.getUint8(0), offsets:a(1,3), raw:a(7,9), oriented:a(25,9) };
+}
+function encodeMag(m, size){
+  const b=new Uint8Array(Math.max(size,43)), dv=new DataView(b.buffer);
+  dv.setUint8(0,m.seq&255);
+  m.offsets.forEach((v,i)=>dv.setInt16(1+2*i,v,true));
+  m.raw.forEach((v,i)=>dv.setInt16(7+2*i,v,true));
+  m.oriented.forEach((v,i)=>dv.setInt16(25+2*i,v,true));
+  return b;
+}
+
+/* ---------- HID transport ---------- */
+let dev=null, featSize={}, queue=Promise.resolve();
+function serial(fn){ const p=queue.then(fn,fn); queue=p.catch(()=>{}); return p; }
+
+function collectFeatureSizes(device){
+  const sizes={};
+  const walk=cols=>{ for(const c of cols||[]){
+    for(const r of c.featureReports||[]){
+      let bits=0; for(const it of r.items||[]) bits+=(it.reportSize||0)*(it.reportCount||0);
+      sizes[r.reportId]=Math.max(sizes[r.reportId]||0, Math.ceil(bits/8));
+    }
+    walk(c.children);
+  }};
+  walk(device.collections);
+  return sizes;
+}
+async function getFeature(id){
+  return serial(async()=>{
+    const dv=await dev.receiveFeatureReport(id);
+    const want=featSize[id];
+    if((S.dumped[id]||0)<2){ S.dumped[id]=(S.dumped[id]||0)+1;
+      log(`raw report ${id} (${dv.byteLength} bytes, descriptor says ${want??"?"}): `+Array.from(new Uint8Array(dv.buffer,dv.byteOffset,Math.min(dv.byteLength,32))).map(b=>b.toString(16).padStart(2,"0")).join(" ")); }
+    // Chrome may prepend the report ID, and Windows pads every feature report to the
+    // longest one, so length alone can't tell us. Decide once from the AUX report by
+    // checking which alignment gives a sensible ~1 g accelerometer reading.
+    if(!S.dataOk && id===RID.AUX){
+      // Keep checking until a plausible reading arrives (a sleeping/unlinked wireless
+      // tracker returns zeros, which says nothing about alignment).
+      const accMag=o=>dv.byteLength>=o+12 ? Math.hypot(dv.getInt16(o+6,true),dv.getInt16(o+8,true),dv.getInt16(o+10,true))/16384 : 99;
+      const m0=accMag(0), m1=dv.getUint8(0)===id ? accMag(1) : 99;
+      const ok0=m0>0.6&&m0<1.4, ok1=m1>0.6&&m1<1.4;
+      S.alignTries=(S.alignTries||0)+1;
+      if(ok0||ok1){
+        S.prefixMode = ok1 && (!ok0 || Math.abs(m1-1)<Math.abs(m0-1));
+        S.dataOk=true; S.accS=null; $("noHid").hidden=true;
+        log(`Report alignment: ${S.prefixMode?"report ID first":"no report ID"} (accel ${(S.prefixMode?m1:m0).toFixed(2)} g) — OK`);
+        if(dev) setTimeout(()=>{ readConfig().catch(()=>{}); readMag().catch(()=>{}); },50); // re-read with correct alignment
+      } else {
+        if(S.prefixMode==null) S.prefixMode = dv.getUint8(0)===id && dv.byteLength>(featSize[id]||0);
+        if(S.alignTries===1 || S.alignTries%50===0){
+          log(`Waiting for valid sensor data (accel reads ${m0.toFixed(2)} / ${m1.toFixed(2)} g)`);
+          if(S.alignTries%50===0) log("raw report 5: "+Array.from(new Uint8Array(dv.buffer,dv.byteOffset,Math.min(dv.byteLength,32))).map(b=>b.toString(16).padStart(2,"0")).join(" "));
+        }
+        $("noHid").hidden=false;
+        $("noHid").textContent="Waiting for valid sensor data from the tracker — writes are disabled until then. If it's wireless, pick it up or move it to wake it. If this doesn't clear, send me the 'raw report' lines from the log.";
+      }
+    }
+    const strip = S.prefixMode==null ? (dv.byteLength>0 && dv.getUint8(0)===id && dv.byteLength>(want||0)) : S.prefixMode;
+    return strip ? new DataView(dv.buffer, dv.byteOffset+1, dv.byteLength-1) : dv;
+  });
+}
+async function setFeature(id, bytes){
+  if((id===RID.CONFIG||id===RID.MAG) && !S.dataOk){ log(`Refusing to write report ${id}: sensor data alignment not confirmed`); throw new Error("write blocked — data alignment not confirmed"); }
+  const want=featSize[id]||bytes.length;
+  const out=new Uint8Array(Math.max(want,0)); out.set(bytes.subarray(0,out.length));
+  return serial(()=>dev.sendFeatureReport(id,out));
+}
+async function sendCmd(cmd, opt=0){
+  const b=new Uint8Array(Math.max(featSize[RID.CMD]||2,2)); b[0]=cmd; b[1]=opt;
+  log(`→ command ${cmd}${opt?` (${opt})`:""}`);
+  return setFeature(RID.CMD,b);
+}
+
+/* ---------- small linear algebra ---------- */
+const mmul=(A,B)=>A.map((r,i)=>B[0].map((_,j)=>r.reduce((s,_,k)=>s+A[i][k]*B[k][j],0)));
+const T=A=>A[0].map((_,j)=>A.map(r=>r[j]));
+function solve(A,b){ // Gaussian elimination with partial pivoting
+  const n=b.length, M=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){
+    let p=c; for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
+    [M[c],M[p]]=[M[p],M[c]];
+    if(Math.abs(M[c][c])<1e-300) throw new Error("singular");
+    for(let r=c+1;r<n;r++){ const f=M[r][c]/M[c][c]; for(let k=c;k<=n;k++) M[r][k]-=f*M[c][k]; }
+  }
+  const x=Array(n).fill(0);
+  for(let r=n-1;r>=0;r--){ let s=M[r][n]; for(let k=r+1;k<n;k++) s-=M[r][k]*x[k]; x[r]=s/M[r][r]; }
+  return x;
+}
+function inv3(m){
+  const [a,b,c]=m[0],[d,e,f]=m[1],[g,h,i]=m[2];
+  const A=e*i-f*h,B=-(d*i-f*g),C=d*h-e*g,det=a*A+b*B+c*C;
+  return [[A,-(b*i-c*h),b*f-c*e],[B,a*i-c*g,-(a*f-c*d)],[C,-(a*h-b*g),a*e-b*d]].map(r=>r.map(v=>v/det));
+}
+function jacobiEig(S){ // symmetric 3x3 → {values, vectors (columns)}
+  let A=S.map(r=>[...r]), V=[[1,0,0],[0,1,0],[0,0,1]];
+  for(let sweep=0;sweep<60;sweep++){
+    let off=Math.abs(A[0][1])+Math.abs(A[0][2])+Math.abs(A[1][2]);
+    if(off<1e-15) break;
+    for(const [p,q] of [[0,1],[0,2],[1,2]]){
+      if(Math.abs(A[p][q])<1e-18) continue;
+      const th=(A[q][q]-A[p][p])/(2*A[p][q]);
+      const t=Math.sign(th||1)/(Math.abs(th)+Math.sqrt(th*th+1)), c=1/Math.sqrt(t*t+1), s=t*c;
+      for(let k=0;k<3;k++){ const akp=A[k][p], akq=A[k][q]; A[k][p]=c*akp-s*akq; A[k][q]=s*akp+c*akq; }
+      for(let k=0;k<3;k++){ const apk=A[p][k], aqk=A[q][k]; A[p][k]=c*apk-s*aqk; A[q][k]=s*apk+c*aqk; }
+      for(let k=0;k<3;k++){ const vkp=V[k][p], vkq=V[k][q]; V[k][p]=c*vkp-s*vkq; V[k][q]=s*vkp+c*vkq; }
+    }
+  }
+  return {values:[A[0][0],A[1][1],A[2][2]], vectors:V};
+}
+
+/* ---------- calibration fits (ported from magCloud.cs) ---------- */
+function fitKiss(pts){ // "Standard": min/max box → offsets + diagonal scale
+  const mn=[Infinity,Infinity,Infinity], mx=[-Infinity,-Infinity,-Infinity];
+  for(const p of pts) for(let k=0;k<3;k++){ mn[k]=Math.min(mn[k],p[k]); mx[k]=Math.max(mx[k],p[k]); }
+  const off=[0,1,2].map(k=>mx[k]-(mx[k]-mn[k])*0.5);
+  const rng=[0,1,2].map(k=>mx[k]-mn[k]), big=Math.max(...rng);
+  const C=[[big/rng[0],0,0],[0,big/rng[1],0],[0,0,big/rng[2]]];
+  return {offsets:off, C};
+}
+function fitEllipsoid(pts){ // "Alt.1": general quadric least squares → centre + V·D·Vᵀ
+  const m=[0,1,2].map(k=>pts.reduce((s,p)=>s+p[k],0)/pts.length); // centre for conditioning
+  const DtD=Array.from({length:9},()=>Array(9).fill(0)), Dt1=Array(9).fill(0);
+  for(const p of pts){
+    const x=p[0]-m[0], y=p[1]-m[1], z=p[2]-m[2];
+    const r=[x*x,y*y,z*z,2*x*y,2*x*z,2*y*z,2*x,2*y,2*z];
+    for(let i=0;i<9;i++){ Dt1[i]+=r[i]; for(let j=0;j<9;j++) DtD[i][j]+=r[i]*r[j]; }
+  }
+  const v=solve(DtD,Dt1);
+  const A4=[[v[0],v[3],v[4],v[6]],[v[3],v[1],v[5],v[7]],[v[4],v[5],v[2],v[8]],[v[6],v[7],v[8],-1]];
+  const A3=[[v[0],v[3],v[4]],[v[3],v[1],v[5]],[v[4],v[5],v[2]]];
+  const ci=inv3(A3), c=ci.map(r=>-(r[0]*v[6]+r[1]*v[7]+r[2]*v[8]));
+  const Tm=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[c[0],c[1],c[2],1]];
+  const R=mmul(mmul(Tm,A4),T(Tm));
+  const M=[0,1,2].map(i=>[0,1,2].map(j=>R[i][j]/(-R[3][3])));
+  const {values,vectors:V}=jacobiEig(M);
+  if(values.some(l=>!(l>0))) throw new Error("ellipsoid fit failed (not enough coverage) — try Standard or collect more rotation");
+  const radii=values.map(l=>Math.sqrt(1/l)), rmin=Math.min(...radii);
+  const D=[[rmin/radii[0],0,0],[0,rmin/radii[1],0],[0,0,rmin/radii[2]]];
+  const C=mmul(mmul(V,D),T(V));
+  return {offsets:[c[0]+m[0],c[1]+m[1],c[2]+m[2]], C};
+}
+function applyCal(p,off,C){ // row-vector × matrix, as MathNet "vector *= m"
+  const d=[p[0]-off[0],p[1]-off[1],p[2]-off[2]];
+  return [0,1,2].map(j=>d[0]*C[0][j]+d[1]*C[1][j]+d[2]*C[2][j]);
+}
+function orientationParams(idx, screwsUp){ // Form1.cbOrientation_SelectedIndexChanged
+  const P=Math.PI;
+  switch(idx){
+    case 0: return {angle:P, flip:0};
+    case 1: return {angle:screwsUp?-P/2:P/2, flip:0};
+    case 2: return {angle:0, flip:0};
+    case 3: return {angle:screwsUp?P/2:-P/2, flip:0};
+    case 4: return {angle:0, flip:-1};
+    case 5: return {angle:P, flip:1};
+  }
+  return {angle:0, flip:0};
+}
+const q14=x=>Math.max(-32768,Math.min(32767,Math.trunc(x*16384)));
+function buildMagReport(offsets, C, orientIdx, screwsUp, seq){ // Form1.sendMagCal
+  const {angle,flip}=orientationParams(orientIdx, screwsUp);
+  const c=Math.cos(angle), s=Math.sin(angle);
+  const Rz=[[c,s,0],[-s,c,0],[0,0,1]];
+  const F=[[0,0,-1],[0,1,0],[1,0,0]];
+  let O=mmul(C,Rz); if(flip!==0) O=mmul(O,F);
+  return { seq:seq||0,
+    offsets:offsets.map(v=>Math.max(-32768,Math.min(32767,Math.trunc(v*32)))),
+    raw:C.flat().map(q14), oriented:O.flat().map(q14) };
+}
+
+/* ---------- state ---------- */
+const S = {
+  aux:null, cfg:null, mag:null, chan:null, wired:false, pid:0, screwsUp:false, major:0,
+  outputOn:true, joy:[0,0,0], heads:[], lastCfgRead:0, lastMagRead:0, lastChanRead:0, antiSpam:0,
+  // mag collection
+  collecting:false, pts:[], prevAccepted:null, radSum:0,
+  fitted:null, // {offsets,C,corrected[]}
+  // wizard
+  wiz:"idle", biasWait:null, flatWarned:false, dumped:{}, prefixMode:null, dataOk:false, accS:null,
+  rfHist:[], polling:false,
+};
+
+/* ---------- UI helpers ---------- */
+const $=id=>document.getElementById(id);
+function log(msg){ const el=$("log"); const t=new Date().toTimeString().slice(0,8); el.textContent+=`${t}  ${msg}\n`; el.scrollTop=el.scrollHeight; }
+function setPill(el,text,cls){ el.textContent=text; el.className="pill"+(cls?" "+cls:""); }
+for(const sel of [$("selOrient"),$("selWizOrient")]){
+  if(sel.id==="selWizOrient") sel.add(new Option("Select…",""));
+  ORIENTS.forEach((o,i)=>sel.add(new Option(o,i)));
+}
+const gaugeDefs=[["Yaw",0],["Pitch",1],["Roll",2]];
+$("gauges").innerHTML=gaugeDefs.map(([n])=>`<div class="gauge"><span class="muted">${n}</span> <span id="g${n}">–</span><div class="bar"><i id="b${n}"></i></div></div>`).join("");
+
+function setConnectedUI(on){
+  for(const id of ["btnRecentre","btnRecentre2","btnLevel","btnBias","btnFullBias","btnOutput","btnSaveCfg","btnReloadCfg","btnBackup","btnRestore"]) $(id).disabled=!on;
+  $("btnDisconnect").disabled=!on; $("btnConnect").disabled=on;
+  if(!on){ setPill($("connPill"),"not connected"); setWiz("idle"); }
+}
+
+/* ---------- connect / poll ---------- */
+async function openDevice(d){
+  dev=d;
+  if(!dev.opened) await dev.open();
+  featSize=collectFeatureSizes(dev); S.dumped={}; S.prefixMode=null; S.dataOk=false; S.accS=null; S.alignTries=0;
+  S.pid=dev.productId; S.wired=WIRED_PIDS.includes(dev.productId);
+  $("dProduct").textContent=dev.productName||"EDTracker";
+  $("dUsb").textContent=dev.vendorId.toString(16).padStart(4,"0").toUpperCase()+":"+dev.productId.toString(16).padStart(4,"0").toUpperCase()+(S.wired?" (wired)":" (wireless)");
+  log(`Opened ${dev.productName} — feature sizes ${JSON.stringify(featSize)}`);
+  dev.addEventListener("inputreport", onInput);
+  setPill($("connPill"),"connected","ok");
+  setConnectedUI(true);
+  try { S.aux=decodeAux(await getFeature(RID.AUX)); } catch(e){ log("AUX read failed: "+e.message); }
+  try { await readMag(); } catch(e){ log("mag read failed: "+e.message); }
+  try { await readConfig(); } catch(e){ log("config read failed: "+e.message); }
+  if(!S.cfg || S.cfg.yawScale===0){ await sendCmd(CMD.GET_CONFIG); }
+  setWiz("welcome");
+  pollLoop();
+}
+async function connect(){
+  try{
+    const ds=await navigator.hid.requestDevice({filters:FILTERS});
+    if(!ds.length) return;
+    // Pick the interface that exposes feature report 5 (AUX); fall back to first.
+    const pick=ds.find(d=>collectFeatureSizes(d)[RID.AUX])||ds[0];
+    await openDevice(pick);
+  }catch(e){ log("Connect failed: "+e.message); }
+}
+async function disconnect(){
+  S.polling=false; S.collecting=false;
+  try{ if(dev){ dev.removeEventListener("inputreport",onInput); await dev.close(); } }catch{}
+  dev=null; setConnectedUI(false); log("Disconnected");
+}
+function onInput(e){
+  if(e.reportId!==RID.JOY) return;
+  const dv=e.data; if(dv.byteLength<6) return;
+  S.joy=[dv.getInt16(0,true),dv.getInt16(2,true),dv.getInt16(4,true)].map(v=>v*180/32768);
+  gaugeDefs.forEach(([n,i])=>{ $("g"+n).textContent=(S.joy[i]>=0?"+":"")+S.joy[i].toFixed(1)+"°"; $("b"+n).style.left=(50+S.joy[i]/180*50).toFixed(1)+"%"; });
+}
+async function readConfig(){
+  const dv=await getFeature(RID.CONFIG); S.cfg=decodeConfig(dv); S.lastCfgRead=performance.now();
+  const v=S.cfg.version; S.major=(v&0x70)>>4; const minor=v&0xF, beta=(v&0x80)!==0;
+  S.screwsUp=(v&0x7F)<18;
+  $("dFw").textContent=`${S.major}.${minor}${beta?" beta":""}`;
+  $("dChan").textContent=S.cfg.channel? String(S.cfg.channel/3) : "–";
+  fillSettingsFromCfg(); log(`Config: ${JSON.stringify(S.cfg)}`);
+}
+async function readMag(){
+  const dv=await getFeature(RID.MAG); S.mag=decodeMag(dv); S.lastMagRead=performance.now(); showStoredMag();
+}
+function showStoredMag(){
+  if(!S.mag) return;
+  $("dOffsets").textContent=S.mag.offsets.map(v=>(v/32).toFixed(2)).join("   ");
+  const r=S.mag.raw.map(v=>v/16384);
+  $("dMatrix").innerHTML=[0,1,2].map(i=>"<tr>"+[0,1,2].map(j=>`<td>${r[i*3+j].toFixed(3)}</td>`).join("")+"</tr>").join("");
+}
+async function pollLoop(){
+  if(S.polling) return; S.polling=true;
+  let lastRfT=performance.now(), lastRf=null;
+  while(S.polling && dev){
+    const t0=performance.now();
+    try{
+      const a=decodeAux(await getFeature(RID.AUX)); S.aux=a;
+      onAux(a);
+      // follow the "data available" flags like the original, rate-limited
+      const now=performance.now();
+      if(a.calAvail && now-S.lastCfgRead>1000) await readConfig();
+      else if(a.chanAvail && now-S.lastChanRead>1000){ S.chan=decodeChannel(await getFeature(RID.CHANNEL)); S.lastChanRead=now; $("dChan").textContent=String(S.chan/3); }
+      else if(a.orientAvail && a.rawMagAvail && now-S.lastMagRead>2000) await readMag();
+      if(!S.cfg || S.cfg.yawScale===0){ if(--S.antiSpam<=0){ S.antiSpam=100; await sendCmd(CMD.GET_CONFIG); } }
+    }catch(e){
+      log("Poll error: "+e.message); setPill($("connPill"),"error","bad");
+      await new Promise(r=>setTimeout(r,500));
+    }
+    const dt=performance.now()-t0; await new Promise(r=>setTimeout(r,Math.max(0,(S.collecting?12:40)-dt)));
+  }
+}
+function decodeChannel(dv){ return dv.getUint8(0); }
+
+function onAux(a){
+  const st=STATUS[Math.min(a.deviceStatus,STATUS.length-1)];
+  if(a.deviceStatus!==S.lastStatus){ log(`Status: ${st} (${a.deviceStatus})`); S.lastStatus=a.deviceStatus; }
+  setPill($("dStatus"),st, st==="RUNNING"?"ok":(st==="BIAS"||st==="RECENTRE"||st==="SLEEPING")?"warn":"bad");
+  setPill($("hStatus"),st, st==="RUNNING"?"ok":(st==="BIAS"||st==="RECENTRE"||st==="SLEEPING")?"warn":"bad");
+  $("dRf").textContent=a.rfCount+" /s";
+  if(!S.wired){
+    const v=(a.voltage-70)/750;
+    $("dBatt").textContent=`${v.toFixed(2)} V · ${(a.chargeStatus&1)?"charged":"charging"}`;
+    $("hBatt").hidden=false; setPill($("hBatt"),`🔋 ${v.toFixed(2)} V`, v<3.5?"bad":v<3.7?"warn":"");
+  } else $("dBatt").textContent="wired";
+  let h=a.magHeading/182; if(h>180) h-=360;
+  $("dHeading").textContent=(h>=0?"+":"")+h.toFixed(2)+"°";
+  S.heads.push(h); if(S.heads.length>200) S.heads.shift();
+  if(S.heads.length===200){
+    const m=S.heads.reduce((s,x)=>s+x,0)/200, sd=Math.sqrt(S.heads.reduce((s,x)=>s+(x-m)**2,0)/200);
+    $("dStd").textContent=sd.toFixed(2)+"° σ"+(sd>1?"  (noisy)":"");
+  }
+  S.accS = S.accS ? S.accS.map((v,i)=>0.85*v+0.15*a.accel[i]) : [...a.accel];
+  const g=S.accS.map(v=>v/16384), gm=Math.hypot(...g);
+  $("dAcc").textContent=g.map(v=>(v>=0?"+":"")+v.toFixed(2)).join("  ")+`   |a| ${gm.toFixed(2)}`;
+  $("dGyro").textContent=a.gyro.join("  ");
+  { const d=r=>r*180/Math.PI, tx=d(Math.atan2(g[0],Math.hypot(g[1],g[2]))), ty=d(Math.atan2(g[1],Math.hypot(g[0],g[2]))), tot=d(Math.acos(Math.max(-1,Math.min(1,g[2]/(gm||1)))));
+    $("dTilt").textContent=`${tot.toFixed(1)}°  (X axis ${tx>=0?"+":""}${tx.toFixed(1)}°, Y axis ${ty>=0?"+":""}${ty.toFixed(1)}°)`; }
+  $("dMagRaw").textContent=a.magRaw.join("  ");
+  if(S.collecting) collectSample(a.magRaw);
+  if(S.biasWait) biasTick(a.deviceStatus);
+}
+
+/* ---------- mag sample collection (Form1 dTimer logic) ---------- */
+function startCollect(){
+  S.pts=[]; S.prevAccepted=null; S.radSum=0; S.fitted=null; S.collecting=true;
+  $("prog").value=0; $("fitQuality").textContent="";
+  sendCmd(CMD.FULL_DATA_OUT);
+  log("Mag calibration started — rotate the tracker in all directions");
+}
+function collectSample(m){
+  if(m[0]===0&&m[1]===0&&m[2]===0) return;
+  const len=Math.hypot(...m);
+  if(S.prevAccepted){
+    const meanR=S.radSum/S.pts.length;
+    if(len>=2*meanR) return;
+    const p=S.prevAccepted, cos=(m[0]*p[0]+m[1]*p[1]+m[2]*p[2])/(len*Math.hypot(...p));
+    const ang=Math.acos(Math.max(-1,Math.min(1,cos)))*180/Math.PI;
+    if(ang*5<=MAG_SENS) return;
+  }
+  S.pts.push([...m]); S.prevAccepted=m; S.radSum+=len;
+  if(S.pts.length>MAG_BUF) S.pts.shift();
+  const n=Math.min(S.pts.length,MAG_TARGET);
+  $("prog").value=n; $("progTxt").textContent=`${n} / ${MAG_TARGET} points`;
+  const mn=[0,1,2].map(k=>Math.min(...S.pts.map(p=>p[k]))), mx=[0,1,2].map(k=>Math.max(...S.pts.map(p=>p[k])));
+  $("rangeTxt").textContent="XYZ".split("").map((a,k)=>`${a} ${mn[k]}…${mx[k]}`).join("  ");
+  $("btnWizFinishEarly").disabled=S.pts.length<200;
+  if(S.pts.length>=MAG_TARGET && S.wiz==="rotate"){ S.collecting=false; finishMagCal(); }
+}
+
+async function finishMagCal(){
+  S.collecting=false;
+  const method=$("selMethod").value;
+  let fit;
+  try{ fit = method==="ellipsoid" ? fitEllipsoid(S.pts) : fitKiss(S.pts); }
+  catch(e){
+    if(method!=="ellipsoid"){ log("Fit error: "+e.message); setWiz("upright"); $("wizText").textContent="Fit failed: "+e.message; return; }
+    log(e.message+" — falling back to Standard fit"); fit=fitKiss(S.pts);
+  }
+  const corrected=S.pts.map(p=>applyCal(p,fit.offsets,fit.C));
+  const rs=corrected.map(p=>Math.hypot(...p)), mr=rs.reduce((s,x)=>s+x,0)/rs.length;
+  const spread=Math.sqrt(rs.reduce((s,x)=>s+(x-mr)**2,0)/rs.length)/mr*100;
+  S.fitted={...fit, corrected};
+  $("fitQuality").textContent=`sphericity: ±${spread.toFixed(1)}% radius spread`;
+  log(`Fit (${method}) offsets ${fit.offsets.map(v=>v.toFixed(1)).join(", ")}, spread ${spread.toFixed(1)}%`);
+  const orient=+$("selWizOrient").value;
+  // config first (orientation), then mag cal built for that orientation
+  if(S.cfg){ S.cfg.orientation=orient; await setFeature(RID.CONFIG, encodeConfig({...S.cfg, version:0}, featSize[RID.CONFIG]||13)); log("→ config saved (orientation "+ORIENTS[orient]+")"); }
+  const rep=buildMagReport(fit.offsets, fit.C, orient, S.screwsUp, S.mag?S.mag.seq:0);
+  await setFeature(RID.MAG, encodeMag(rep, featSize[RID.MAG]||43));
+  log("→ mag calibration saved");
+  S.mag={...rep}; showStoredMag(); $("selOrient").value=orient;
+  setWiz("done");
+}
+
+/* ---------- bias (Form1.runAutoBias + waitingForBias) ---------- */
+async function runBias(full){
+  S.biasWait={ sawRecentre:false, t0:performance.now(), full };
+  setTimeout(()=>{ if(S.biasWait && S.wiz==="bias"){ $("btnWizNext").disabled=false;
+    if(!S.aux) $("wizText").textContent="No status is coming back from the tracker (see log). Press Continue when its LED shows it has finished."; } },8000);
+  await sendCmd(full?CMD.FULL_BIAS:CMD.AUTO_BIAS);
+  log(full?"Full (gyro+accel) bias running — keep still":"Gyro bias running — keep still");
+}
+function biasTick(status){
+  const b=S.biasWait, el=performance.now()-b.t0;
+  if(status===0||status===1) b.sawRecentre=true;
+  if(S.wiz==="bias"){
+    $("wizText").textContent=`Calibrating bias… keep the tracker completely still. Tracker reports: ${STATUS[Math.min(status,5)]} (${Math.round(el/1000)} s)`
+      + (el>8000?" — if this doesn't finish, press Continue.":"");
+    if(el>8000) $("btnWizNext").disabled=false;
+  }
+  // Done when back to RUNNING after BIAS/RECENTRE, or RUNNING/SLEEPING after a grace period
+  // (a wireless tracker left motionless may drop straight into SLEEPING once finished).
+  if((status===2 && (b.sawRecentre || el>5000)) || (status===3 && (b.sawRecentre || el>8000))) biasFinished("complete");
+}
+async function biasFinished(how){
+  if(!S.biasWait) return;
+  S.biasWait=null; log("Bias calibration "+how);
+  await sendCmd(CMD.FULL_DATA_OUT);   // original sends this only after the bias dialog closes
+  if(S.wiz==="bias") setWiz("mount");
+}
+
+/* ---------- wizard ---------- */
+const WIZ = {
+  idle:    {step:null, text:"Connect the tracker (or its wireless dongle) to begin.", next:null},
+  welcome: {step:"flat", text:"Place the tracker flat on the desk, logo up, and don't touch it. Press Start to run the gyro and accelerometer bias calibration.", next:"Start"},
+  bias:    {step:"flat", text:"Calibrating bias… keep the tracker completely still.", next:"Continue"},
+  mount:   {step:"mount", text:"Mount the tracker on your headset and choose the matching orientation below.", next:"Next"},
+  upright: {step:"upright", text:"Hold the headset upright, away from speakers, metal desks and monitors. Press Next, then start rotating.", next:"Next"},
+  rotate:  {step:"rotate", text:"Slowly rotate the headset through every direction — tumble it end over end, roll it, turn it upside down — until the bar fills.", next:null},
+  done:    {step:"done", text:"Calibration saved. Put the headset on, look straight ahead and press Finish to recentre.", next:"Finish"},
+};
+function setWiz(s){
+  S.wiz=s; const w=WIZ[s]; if(s==="welcome") S.flatWarned=false;
+  $("wizText").textContent=w.text;
+  const order=["flat","mount","upright","rotate","done"], idx=order.indexOf(w.step);
+  document.querySelectorAll("#steps li").forEach((li,i)=>{ li.className = i===idx?"on":(i<idx?"done":""); });
+  $("btnWizNext").textContent=w.next||"…"; $("btnWizNext").disabled=!w.next || (s==="mount" && $("selWizOrient").value==="");
+  $("btnWizBack").disabled=!["bias","mount","upright","rotate"].includes(s);
+  $("wizOrient").hidden=s!=="mount"; $("wizProgress").hidden=!["rotate","done"].includes(s);
+  $("btnWizFinishEarly").hidden=s!=="rotate"; $("btnWizFinishEarly").disabled=true;
+  $("selMethod").disabled=s==="rotate";
+}
+$("selWizOrient").addEventListener("change",()=>{ if(S.wiz==="mount") $("btnWizNext").disabled=$("selWizOrient").value===""; });
+$("btnWizNext").addEventListener("click", async()=>{
+  if(S.wiz==="welcome"){
+    if(!S.dataOk){ $("wizText").textContent="Still waiting for valid sensor data from the tracker. If it's wireless, pick it up or move it to wake it, then press Start again."; return; }
+    if(S.aux && !S.flatWarned){
+      const g=(S.accS||S.aux.accel).map(v=>v/16384); let z=g[2]; if(S.pid===0x0AEA||S.pid===0x0AEB) z=-z;
+      const mag=Math.hypot(...g), tilt=Math.abs(z)/(mag||1);
+      let warn=null;
+      if(mag<0.6||mag>1.4) warn=`The accelerometer reads ${mag.toFixed(2)} g in total (should be about 1 g), so the data may be misread — check the log.`;
+      else if(tilt<0.9) warn="The tracker doesn't look level.";
+      else if(z<0) warn="The tracker looks upside down.";
+      if(warn){
+        S.flatWarned=true; log("Flat check: accel "+g.map(v=>v.toFixed(2)).join(", ")+" g");
+        $("wizText").textContent=warn+" If it really is flat with the logo up, press Continue anyway.";
+        $("btnWizNext").textContent="Continue anyway"; return;
+      }
+    }
+    S.flatWarned=false;
+    setWiz("bias"); $("btnWizNext").disabled=true;
+    await runBias(S.major>=2);
+  } else if(S.wiz==="bias"){ await biasFinished("skipped by user");
+  } else if(S.wiz==="mount"){ setWiz("upright"); }
+  else if(S.wiz==="upright"){ setWiz("rotate"); startCollect(); }
+  else if(S.wiz==="done"){
+    await sendCmd(CMD.RECENTER); await new Promise(r=>setTimeout(r,300)); await sendCmd(CMD.RECENTER);
+    await sendCmd(CMD.MIN_DATA_OUT);
+    $("wizText").textContent="All done. You can re-run the wizard any time."; S.wiz="welcome"; $("wizOrient").hidden=true;
+    $("btnWizNext").textContent="Run again"; $("btnWizNext").disabled=false; $("btnWizBack").disabled=true;
+  }
+});
+$("btnWizBack").addEventListener("click",()=>{ S.collecting=false; if(S.wiz==="bias"){ S.biasWait=null; setWiz("welcome"); } else if(S.wiz==="mount") setWiz("welcome"); else if(S.wiz==="upright") setWiz("mount"); else if(S.wiz==="rotate") setWiz("upright"); });
+$("btnWizFinishEarly").addEventListener("click",()=>{ if(S.pts.length>=200) finishMagCal(); });
+
+/* ---------- settings ---------- */
+function fillSettingsFromCfg(){
+  const c=S.cfg; if(!c) return;
+  $("selOrient").value=c.orientation<6?c.orientation:0;
+  $("selMode").value=c.scaleMode<2?c.scaleMode:0;
+  syncScaleInputs();
+  $("inSmooth").value=Math.round(99.05*Math.pow(c.LPF/32767,1/0.15));
+}
+function syncRollOff(){ const off=$("rollOff").checked; $("inRoll").disabled=off; if(off) $("vRoll").textContent="off"; else showScale("inRoll"); }
+function showScale(id){ $("v"+id.slice(2)).textContent=(+$(id).value).toFixed(2)+"×"; }
+for(const id of ["inYaw","inPitch","inRoll"]) $(id).addEventListener("input",()=>showScale(id));
+function syncScaleInputs(){
+  const c=S.cfg, exp=$("selMode").value==="1";
+  $("inYaw").dataset.v=((exp?c.expYawScale:c.yawScale)/4).toFixed(2);
+  $("inPitch").dataset.v=((exp?c.expPitchScale:c.pitchScale)/4).toFixed(2);
+  $("inRoll").dataset.v=((exp?c.expRollScale:c.rollScale)/4).toFixed(2);
+  $("selOutput").value=c.outputOff?1:0;
+  const rv=+$("inRoll").dataset.v;
+  if(rv===0){ $("rollOff").checked=true; $("inRoll").dataset.v="1.00"; } else if(!S.nativeRollOff) $("rollOff").checked=false;
+  for(const id of ["inYaw","inPitch","inRoll"]){ const v=+$(id).dataset.v; $(id).max=Math.max(10,v); $(id).min=Math.min(1,v); $(id).value=v; showScale(id); }
+  syncRollOff();
+}
+$("selMode").addEventListener("change",()=>{ if(S.cfg){ S.cfg.scaleMode=+$("selMode").value; syncScaleInputs(); } });
+$("btnSaveCfg").addEventListener("click", async()=>{
+  if(!S.cfg){ log("No config read yet"); return; }
+  const c={...S.cfg}, exp=$("selMode").value==="1";
+  const q=v=>Math.max(0,Math.min(255,Math.round((+v)*4)));
+  c.version=0; c.scaleMode=exp?1:0;
+  if(exp){ c.expYawScale=q($("inYaw").value); c.expPitchScale=q($("inPitch").value); c.expRollScale=q($("inRoll").value); }
+  else   { c.yawScale=q($("inYaw").value);    c.pitchScale=q($("inPitch").value);    c.rollScale=q($("inRoll").value); }
+  if($("rollOff").checked){ c.rollScale=0; c.expRollScale=0; } // tracker sends no roll at all
+  c.outputOff=+$("selOutput").value;
+  const sm=Math.max(0,Math.min(99,+$("inSmooth").value||0));
+  c.LPF=Math.min(32767,Math.trunc(Math.pow(sm/99.05,0.15)*32767));
+  const newOrient=+$("selOrient").value, orientChanged=newOrient!==S.cfg.orientation;
+  c.orientation=newOrient;
+  await setFeature(RID.CONFIG, encodeConfig(c, featSize[RID.CONFIG]||13)); log("→ config saved");
+  S.cfg=c;
+  if(orientChanged && S.mag){ // original re-sends mag cal with new orientation matrix
+    const C=[0,1,2].map(i=>[0,1,2].map(j=>S.mag.raw[i*3+j]/16384));
+    const rep=buildMagReport(S.mag.offsets.map(v=>v/32), C, newOrient, S.screwsUp, S.mag.seq);
+    await setFeature(RID.MAG, encodeMag(rep, featSize[RID.MAG]||43)); S.mag=rep; showStoredMag();
+    log("→ mag calibration re-oriented");
+  }
+});
+$("btnReloadCfg").addEventListener("click", async()=>{ await readConfig(); await readMag(); });
+
+/* ---------- buttons ---------- */
+$("btnConnect").addEventListener("click",connect);
+$("btnDisconnect").addEventListener("click",disconnect);
+function doRecentre(){ if(S.mode==="receiver") return window.edtRecentre().then(()=>log("Recentred (receiver)")); return sendCmd(CMD.RECENTER); }
+$("btnRecentre").addEventListener("click",()=>doRecentre());
+$("btnBias").addEventListener("click",()=>runBias(false));
+$("btnFullBias").addEventListener("click",()=>runBias(true));
+$("btnOutput").addEventListener("click",async()=>{ S.outputOn=!S.outputOn; await sendCmd(S.outputOn?CMD.OUTPUT_ON:CMD.OUTPUT_OFF); $("btnOutput").textContent="Output: "+(S.outputOn?"on":"off"); });
+$("btnBackup").addEventListener("click",async()=>{
+  await readConfig(); await readMag();
+  const blob=new Blob([JSON.stringify({savedAt:new Date().toISOString(), product:dev.productName, config:S.cfg, mag:S.mag},null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`edtracker-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  log("Backup downloaded");
+});
+$("btnRestore").addEventListener("click",()=>$("fileRestore").click());
+$("fileRestore").addEventListener("change",async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const j=JSON.parse(await f.text());
+    if(!j.mag||j.mag.offsets?.length!==3||j.mag.raw?.length!==9||j.mag.oriented?.length!==9) throw new Error("not an EDTracker backup");
+    if(!confirm("Write this backup's calibration and settings to the tracker?")) return;
+    if(j.config) await setFeature(RID.CONFIG, encodeConfig({...j.config, version:0}, featSize[RID.CONFIG]||13));
+    await setFeature(RID.MAG, encodeMag(j.mag, featSize[RID.MAG]||43));
+    log("Backup restored"); await readConfig(); await readMag();
+  }catch(err){ log("Restore failed: "+err.message); }
+  e.target.value="";
+});
+
+/* ---------- point cloud view ---------- */
+const cv=$("cloud"), ctx=cv.getContext("2d");
+let rotY=0.6, rotX=-0.4, drag=null, autoSpin=true;
+cv.addEventListener("pointerdown",e=>{ drag={x:e.clientX,y:e.clientY,ry:rotY,rx:rotX}; autoSpin=false; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove",e=>{ if(!drag) return; rotY=drag.ry+(e.clientX-drag.x)*0.01; rotX=drag.rx+(e.clientY-drag.y)*0.01; });
+cv.addEventListener("pointerup",()=>drag=null);
+function draw(){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight;
+  if(cv.width!==w*dpr||cv.height!==h*dpr){ cv.width=w*dpr; cv.height=h*dpr; }
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  if(autoSpin) rotY+=0.004;
+  const css=getComputedStyle(document.documentElement);
+  const sets=[];
+  if(S.pts.length){
+    const off= S.fitted ? S.fitted.offsets : [0,1,2].map(k=>S.pts.reduce((s,p)=>s+p[k],0)/S.pts.length);
+    sets.push({pts:S.pts.map(p=>[p[0]-off[0],p[1]-off[1],p[2]-off[2]]), col:css.getPropertyValue("--pt-raw")});
+  }
+  if(S.fitted) sets.push({pts:S.fitted.corrected, col:css.getPropertyValue("--pt-cal")});
+  let R=1; for(const s of sets) for(const p of s.pts) R=Math.max(R,Math.hypot(...p));
+  const sc=Math.min(w,h)*0.42/R, cy=Math.cos(rotY), sy=Math.sin(rotY), cx=Math.cos(rotX), sx=Math.sin(rotX);
+  // axes
+  ctx.strokeStyle=css.getPropertyValue("--line"); ctx.lineWidth=1;
+  for(const a of [[1,0,0],[0,1,0],[0,0,1]]){
+    const pr=v=>{ const x=v[0]*cy+v[2]*sy, z=-v[0]*sy+v[2]*cy, y=v[1]*cx-z*sx; return [w/2+x*sc*R, h/2-y*sc*R]; };
+    const p1=pr(a.map(v=>-v)), p2=pr(a); ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke();
+  }
+  if(!sets.length){ ctx.fillStyle=css.getPropertyValue("--muted"); ctx.font="14px system-ui"; ctx.textAlign="center"; ctx.fillText("Samples appear here during step 4", w/2, h/2); }
+  for(const s of sets){
+    ctx.fillStyle=s.col;
+    for(const p of s.pts){
+      const x=p[0]*cy+p[2]*sy, z=-p[0]*sy+p[2]*cy, y=p[1]*cx-z*sx;
+      ctx.globalAlpha=0.35+0.5*((z*cx+p[1]*sx)/R+1)/2;
+      ctx.fillRect(w/2+x*sc-1.5, h/2-y*sc-1.5, 3, 3);
+    }
+  }
+  ctx.globalAlpha=1;
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+/* ---------- 3D head (driven by the tracker's joystick output) ---------- */
+const hv=$("head"), hctx=hv.getContext("2d");
+const HEAD=(()=>{ // simple wireframe head: x right, y up, z towards viewer
+  const lines=[], E=[0.78,1,0.9];
+  for(let la=-60;la<=75;la+=15){ const L=[]; for(let lo=0;lo<=360;lo+=12){ const a=la*Math.PI/180,o=lo*Math.PI/180; L.push([E[0]*Math.cos(a)*Math.sin(o),E[1]*Math.sin(a),E[2]*Math.cos(a)*Math.cos(o)]); } lines.push({pts:L,w:1}); }
+  for(let lo=0;lo<360;lo+=20){ const L=[]; for(let la=-60;la<=90;la+=10){ const a=la*Math.PI/180,o=lo*Math.PI/180; L.push([E[0]*Math.cos(a)*Math.sin(o),E[1]*Math.sin(a),E[2]*Math.cos(a)*Math.cos(o)]); } lines.push({pts:L,w:1}); }
+  const feat=[];
+  feat.push({pts:[[0,0.15,0.9],[0,-0.15,1.15],[0,-0.25,0.92]],w:3,face:true});            // nose
+  for(const x of [-0.3,0.3]){ const L=[]; for(let k=0;k<=12;k++){ const t=k/12*2*Math.PI; L.push([x+0.11*Math.cos(t),0.22+0.05*Math.sin(t),0.84]); } feat.push({pts:L,w:2.5,face:true}); } // eyes
+  { const L=[]; for(let k=0;k<=10;k++){ const t=(k/10-0.5)*1.4; L.push([0.3*Math.sin(t),-0.45-0.06*Math.cos(t*2),0.8]); } feat.push({pts:L,w:2.5,face:true}); } // mouth
+  for(const sx of [-1,1]){ const L=[]; for(let k=0;k<=14;k++){ const t=k/14*2*Math.PI; L.push([sx*0.8,0.05+0.22*Math.sin(t),0.08*Math.cos(t)]); } feat.push({pts:L,w:3}); } // ears
+  return lines.concat(feat);
+})();
+function rotHead(p,y,pi,r){ // roll (z), then pitch (x), then yaw (y)
+  let [x,yy,z]=p, c=Math.cos(r), s=Math.sin(r); [x,yy]=[x*c-yy*s, x*s+yy*c];
+  c=Math.cos(pi); s=Math.sin(pi); [yy,z]=[yy*c-z*s, yy*s+z*c];
+  c=Math.cos(y); s=Math.sin(y); [x,z]=[x*c+z*s, -x*s+z*c];
+  return [x,yy,z];
+}
+function drawHead(){
+  const dpr=window.devicePixelRatio||1, w=hv.clientWidth, h=hv.clientHeight;
+  if(hv.width!==w*dpr||hv.height!==h*dpr){ hv.width=w*dpr; hv.height=h*dpr; }
+  hctx.setTransform(dpr,0,0,dpr,0,0); hctx.clearRect(0,0,w,h);
+  const css=getComputedStyle(document.documentElement), ink=css.getPropertyValue("--ink"), acc=css.getPropertyValue("--accent"), mut=css.getPropertyValue("--line");
+  const [yd,pd,rd]=S.joy, D=Math.PI/180, inv=[...document.querySelectorAll(".inv")].map(c=>c.checked?-1:1);
+  $("headYaw").textContent=`yaw ${yd>=0?"+":""}${yd.toFixed(1)}°`; $("headPitch").textContent=`pitch ${pd>=0?"+":""}${pd.toFixed(1)}°`; $("headRoll").textContent=`roll ${rd>=0?"+":""}${rd.toFixed(1)}°`;
+  const sc=Math.min(w,h)*0.36, cx=w/2, cy=h/2+6, cam=4;
+  const pr=p=>{ const k=cam/(cam-p[2]); return [cx+p[0]*sc*k, cy-p[1]*sc*k, p[2]]; };
+  for(const ln of HEAD){
+    const P=ln.pts.map(p=>pr(rotHead(p, inv[0]*yd*D, inv[1]*pd*D, inv[2]*rd*D)));
+    for(let i=1;i<P.length;i++){
+      const z=(P[i][2]+P[i-1][2])/2, front=z>-0.05;
+      if(!front && ln.face) continue;
+      hctx.strokeStyle= ln.face? acc : (front? ink : mut);
+      hctx.globalAlpha= ln.face? 1 : (front? 0.55 : 0.35);
+      hctx.lineWidth= front? ln.w : 1;
+      hctx.beginPath(); hctx.moveTo(P[i-1][0],P[i-1][1]); hctx.lineTo(P[i][0],P[i][1]); hctx.stroke();
+    }
+  }
+  hctx.globalAlpha=1;
+  requestAnimationFrame(drawHead);
+}
+requestAnimationFrame(drawHead);
+try{ const sv=JSON.parse(localStorage.getItem("edtInvert2")||"[false,true,false]"); document.querySelectorAll(".inv").forEach((c,i)=>c.checked=!!sv[i]); }catch{}
+document.querySelectorAll(".inv").forEach(c=>c.addEventListener("change",()=>{ try{ localStorage.setItem("edtInvert2",JSON.stringify([...document.querySelectorAll(".inv")].map(x=>x.checked))); }catch{} }));
+$("btnRecentre2").addEventListener("click",()=>doRecentre());
+
+$("rollOff").addEventListener("change",async e=>{
+  syncRollOff();
+  if(window.__EDT_NATIVE){ S.nativeRollOff=e.target.checked; await window.edtSetOption("rollOff", e.target.checked); $("rollOff2").checked=e.target.checked; }
+  log(e.target.checked?"Roll off — press Save to tracker to set the tracker's roll scale to 0":"Roll back on — press Save to tracker");
+});
+
+/* ---------- tabs ---------- */
+function showTab(k){
+  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected", String(b.dataset.tab===k)));
+  document.querySelectorAll(".pane").forEach(p=>p.hidden=p.dataset.pane!==k);
+  try{ localStorage.setItem("edtTab",k); }catch{}
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+{ let t="cal"; try{ t=localStorage.getItem("edtTab")||"cal"; }catch{} if((t==="hk"||t==="out") && !window.__EDT_NATIVE) t="cal"; showTab(t); }
+$("btnLevel").addEventListener("click",()=>{ if(confirm("Set level: the tracker must be flat on the desk (logo up) and completely still. Continue?")) runBias(true); });
+
+/* ---------- native (exe) mode ---------- */
+const NATIVE = !!window.__EDT_NATIVE;
+function makeNativeDevice(info){
+  const listeners=[]; let timer=null; const n=Math.max(1,(info.featureLen||45)-1);
+  return {
+    opened:false, vendorId:info.vid, productId:info.pid, productName:info.product||"EDTracker",
+    collections:[{featureReports:[2,3,4,5,6,7].map(id=>({reportId:id,items:[{reportSize:8,reportCount:n}]})),children:[]}],
+    async open(){ this.opened=true; timer=setInterval(async()=>{ try{ const j=await window.edtGetJoy(); if(!j) return;
+      const b=new DataView(new ArrayBuffer(6)); j.forEach((v,i)=>b.setInt16(i*2,v,true)); listeners.forEach(f=>f({reportId:1,data:b})); }catch{} },40); },
+    async close(){ this.opened=false; clearInterval(timer); },
+    addEventListener(t,f){ if(t==="inputreport") listeners.push(f); },
+    removeEventListener(t,f){ const i=listeners.indexOf(f); if(i>=0) listeners.splice(i,1); },
+    async receiveFeatureReport(id){ return new DataView(new Uint8Array(await window.edtGetFeature(id)).buffer); },
+    async sendFeatureReport(id,data){ await window.edtSetFeature(id, Array.from(data)); },
+  };
+}
+async function nativeTick(){
+  try{
+    const s=await window.edtStatus();
+    for(const e of s.events||[]) log(`[${e.kind}] ${e.msg}`);
+    if(s.mode!==S.mode) await applyMode(s.mode);
+    if(S.mode==="receiver"){
+      const now=performance.now(), rate=S.rxLast? Math.round((s.rxCount-S.rxLast.n)/((now-S.rxLast.t)/1000)) : 0;
+      S.rxLast={n:s.rxCount,t:now};
+      if(s.rxErr && !s.rxListening) setPill($("rxStatus"),s.rxErr,"bad");
+      else if(s.rxLive) setPill($("rxStatus"),`receiving from ${s.rxFrom} · ${Math.max(rate,0)}/s`+(s.rxLastRecentre==="tracker"?" · recentre reaches the tracker":s.rxLastRecentre==="software"?" · recentre is local only":""),"ok");
+      else setPill($("rxStatus"),`listening on UDP ${s.rxPort} — nothing received yet`,"warn");
+      setPill($("connPill"), s.rxLive?`receiver · ${s.rxFrom}`:"receiver · waiting", s.rxLive?"ok":"warn");
+      setPill($("hStatus"), s.rxLive?"RECEIVING":"NO DATA", s.rxLive?"ok":"bad");
+      if(document.activeElement!==$("rxPort") && !S.rxEdited) $("rxPort").value=s.rxPort||4242;
+      if(s.vjoy) setPill($("vjStatus"),`vJoy device ${s.vjoyDevice} active`,"ok");
+      else if(s.vjoyErr) setPill($("vjStatus"),s.vjoyErr,"bad");
+      else setPill($("vjStatus"),"off");
+      if(!S.vjBusy){ $("vjOn").checked=!!s.vjoyWanted; $("vjId").value=s.vjoyId||1; $("vjAxes").value=s.vjoyAxes||"xyz"; }
+    }
+    if(!S.ftBusy){
+      $("ftOn").checked=!!s.ft;
+      $("udpOn").checked=!!s.udp;
+      if(document.activeElement!==$("udpHost") && !S.udpEdited) $("udpHost").value=s.udpHost||"";
+      if(document.activeElement!==$("udpPort") && !S.udpEdited) $("udpPort").value=s.udpPort||4242;
+      document.querySelectorAll(".ftinv").forEach((c,i)=>c.checked=!!(s.ftInv&&s.ftInv[i]));
+      $("ftDummy").checked=!!s.ftDummy;
+      if(document.activeElement!==$("rollOff") && document.activeElement!==$("rollOff2")){
+        S.nativeRollOff=!!s.rollOff; $("rollOff2").checked=!!s.rollOff;
+        if(s.rollOff && !$("rollOff").checked){ $("rollOff").checked=true; syncRollOff(); }
+      }
+    }
+    if(s.ftError && !s.ft) setPill($("ftStatus"),"error: "+s.ftError,"bad");
+    else if(!s.ft) setPill($("ftStatus"),"off");
+    else if(s.ftGame) setPill($("ftStatus"),"sending to "+s.ftGame,"ok");
+    else setPill($("ftStatus"),"on — waiting for a game","warn");
+    if(!s.udp) setPill($("udpStatus"),"off");
+    else if(s.udpErr) setPill($("udpStatus"),s.udpErr,"bad");
+    else if(s.udpAddr){
+      const now=performance.now(), rate=S.udpLast? Math.round((s.udpSent-S.udpLast.n)/((now-S.udpLast.t)/1000)) : 0;
+      S.udpLast={n:s.udpSent,t:now};
+      setPill($("udpStatus"),`sending to ${s.udpAddr} · ${rate>0?rate+"/s":"waiting for tracker"}`, rate>0?"ok":"warn");
+    } else setPill($("udpStatus"),"on — resolving…","warn");
+    if(!S.capturingHK){ setPill($("hkRecentre"), s.recentre, s.reDown?"ok":""); setPill($("hkToggle"), s.toggle, s.togDown?"ok":""); }
+    $("hkSound").checked=!!s.sound; $("hkAlwaysAdmin").checked=!!s.alwaysAdmin;
+    setPill($("adminState"), s.admin?"running as administrator":"not administrator", s.admin?"ok":"warn");
+    $("btnAdmin").hidden=!!s.admin;
+    if(s.outputOn!==undefined){ S.outputOn=s.outputOn; $("btnOutput").textContent="Output: "+(S.outputOn?"on":"off"); }
+    if(S.mode==="receiver"){ /* no tracker here */ }
+    else if(s.connected && !dev){ await openDevice(makeNativeDevice(s)); }
+    else if(!s.connected && dev){ log("Tracker disconnected"); await disconnect(); setPill($("connPill"),"searching for tracker…","warn"); }
+  }catch(e){ log("native: "+e); }
+  setTimeout(nativeTick,200);
+}
+async function applyMode(mode){
+  S.mode=mode;
+  document.body.classList.toggle("mode-receiver", mode==="receiver");
+  document.querySelectorAll("#modeSwitch button").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.mode===mode)));
+  for(const t of ["cal","set","dev"]) document.querySelector(`.tabs button[data-tab="${t}"]`).hidden = mode==="receiver";
+  $("btnLevel").hidden = mode==="receiver"; $("hBatt").hidden = true;
+  clearInterval(S.rxJoyTimer);
+  if(mode==="receiver"){
+    if(dev) await disconnect();
+    $("btnRecentre2").disabled=false;
+    S.rxJoyTimer=setInterval(async()=>{ try{ const j=await window.edtGetJoy(); if(j) S.joy=j.map(v=>v*180/32768); }catch{} },40);
+    if(["cal","set","dev"].includes(document.querySelector('.tabs button[aria-selected="true"]')?.dataset.tab)) showTab("out");
+  } else {
+    setPill($("connPill"),"searching for tracker…","warn"); setPill($("hStatus"),"–");
+  }
+}
+function setupNative(){
+  $("modeSwitch").hidden=false;
+  document.querySelectorAll("#modeSwitch button").forEach(b=>b.addEventListener("click",async()=>{
+    if(b.dataset.mode===S.mode) return;
+    await window.edtSetMode(b.dataset.mode); await applyMode(b.dataset.mode);
+  }));
+  for(let i=1;i<=16;i++) $("vjId").add(new Option(String(i),i));
+  const applyVJ=async()=>{ S.vjBusy=true; await window.edtSetVJoy($("vjOn").checked, +$("vjId").value, $("vjAxes").value); S.vjBusy=false; };
+  for(const id of ["vjOn","vjId","vjAxes"]) $(id).addEventListener("change",applyVJ);
+  const applyRx=async()=>{ S.rxEdited=false; S.rxLast=null; await window.edtSetReceiver(+$("rxPort").value||4242); };
+  $("rxApply").addEventListener("click",applyRx);
+  $("rxPort").addEventListener("input",()=>S.rxEdited=true);
+  $("rxPort").addEventListener("keydown",e=>{ if(e.key==="Enter") applyRx(); });
+  $("btnConnect").hidden=true; $("btnDisconnect").hidden=true; $("tabHotkeys").hidden=false; $("tabOutput").hidden=false;
+  $("ftOn").addEventListener("change",async e=>{ S.ftBusy=true; await window.edtSetOption("ft", e.target.checked); S.ftBusy=false; });
+  const applyUDP=async()=>{ S.ftBusy=true; S.udpEdited=false; S.udpLast=null;
+    const host=$("udpHost").value.trim(), port=+$("udpPort").value||4242;
+    if($("udpOn").checked && !host){ setPill($("udpStatus"),"enter the other machine's address","bad"); $("udpOn").checked=false; }
+    await window.edtSetUDP($("udpOn").checked, host, port); S.ftBusy=false; };
+  $("udpOn").addEventListener("change",applyUDP);
+  $("udpApply").addEventListener("click",applyUDP);
+  for(const id of ["udpHost","udpPort"]) $(id).addEventListener("input",()=>S.udpEdited=true);
+  $("udpHost").addEventListener("keydown",e=>{ if(e.key==="Enter") applyUDP(); });
+  document.querySelectorAll(".ftinv").forEach(c=>c.addEventListener("change",()=>window.edtSetOption("ftInv"+c.dataset.ax, c.checked)));
+  $("ftDummy").addEventListener("change",e=>window.edtSetOption("ftDummy", e.target.checked));
+  $("rollOff2").addEventListener("change",async e=>{ S.nativeRollOff=e.target.checked; await window.edtSetOption("rollOff", e.target.checked); $("rollOff").checked=e.target.checked; syncRollOff(); });
+  setPill($("connPill"),"searching for tracker…","warn");
+  document.querySelectorAll("[data-cap]").forEach(b=>b.addEventListener("click",async()=>{
+    const which=b.dataset.cap, lab=which==="recentre"?$("hkRecentre"):$("hkToggle");
+    document.querySelectorAll("[data-cap]").forEach(x=>x.disabled=true);
+    S.capturingHK=true; lab.textContent="Press a key or joystick button… (Esc cancels)"; lab.className="pill warn";
+    await window.edtStartCapture(which);
+    const t0=performance.now();
+    while(performance.now()-t0<11000){
+      await new Promise(r=>setTimeout(r,100));
+      const r=await window.edtCaptureResult();
+      if(r.done){ if(!r.cancelled){ lab.textContent=await window.edtSetBinding(which,r.binding); log(`Hotkey for ${which}: ${lab.textContent}`); } break; }
+    }
+    S.capturingHK=false; lab.className="pill"; document.querySelectorAll("[data-cap]").forEach(x=>x.disabled=false);
+  }));
+  document.querySelectorAll("[data-clear]").forEach(b=>b.addEventListener("click",async()=>{
+    const which=b.dataset.clear; const t=await window.edtSetBinding(which,{type:""});
+    (which==="recentre"?$("hkRecentre"):$("hkToggle")).textContent=t;
+  }));
+  $("hkSound").addEventListener("change",e=>window.edtSetOption("sound",e.target.checked));
+  $("hkAlwaysAdmin").addEventListener("change",e=>window.edtSetOption("alwaysAdmin",e.target.checked));
+  $("btnAdmin").addEventListener("click",async()=>{ const ok=await window.edtRestartAdmin(); if(!ok) log("Elevation cancelled"); });
+  nativeTick();
+}
+
+/* ---------- boot ---------- */
+setConnectedUI(false);
+if(NATIVE){ setupNative(); }
+else if(!("hid" in navigator)){ $("noHid").hidden=false; $("btnConnect").disabled=true; }
+else{
+  navigator.hid.addEventListener("disconnect",e=>{ if(e.device===dev){ log("Device unplugged"); disconnect(); } });
+  // Re-open a previously authorised tracker automatically
+  navigator.hid.getDevices().then(ds=>{
+    const known=ds.filter(d=>FILTERS.some(f=>f.vendorId===d.vendorId&&f.productId===d.productId));
+    const pick=known.find(d=>collectFeatureSizes(d)[RID.AUX])||known[0];
+    if(pick){ log("Reconnecting to previously paired tracker…"); openDevice(pick).catch(e=>log("Auto-connect failed: "+e.message)); }
+  });
+}
+</script>
+</body>
+</html>

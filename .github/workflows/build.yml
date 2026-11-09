@@ -1,0 +1,53 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to publish releases from tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # go.mod points golang.org/x/sys at its GitHub mirror; fetch modules straight from source
+      GOPROXY: direct
+      GOFLAGS: -mod=mod
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test (network, receiver and recentre logic)
+        run: go test -v ./...
+
+      - name: Windows icon and manifest
+        run: |
+          go install github.com/akavel/rsrc@v0.10.2
+          "$(go env GOPATH)/bin/rsrc" -manifest app.manifest -ico app.ico -arch amd64 -o rsrc_windows_amd64.syso
+
+      - name: Build EDTrackerProTool.exe
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: go build -trimpath -ldflags "-H windowsgui -s -w" -o EDTrackerProTool.exe .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EDTrackerProTool
+          path: EDTrackerProTool.exe
+
+      - name: Publish release (tags starting with v)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip "EDTrackerProTool-${GITHUB_REF_NAME}.zip" EDTrackerProTool.exe README.md ftfiles/OPENTRACK-NOTICE.txt
+          gh release create "$GITHUB_REF_NAME" "EDTrackerProTool-${GITHUB_REF_NAME}.zip" --title "$GITHUB_REF_NAME" --generate-notes

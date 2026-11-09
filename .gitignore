@@ -1,0 +1,6 @@
+# build outputs
+/EDTrackerProTool.exe
+*.syso
+/dist/
+# keep the bundled OpenTrack placeholder
+!ftfiles/TrackIR.exe
