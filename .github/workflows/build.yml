@@ -6,6 +6,8 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+  release:
+    types: [published]   # creating a release on github.com builds and attaches the exe
 
 permissions:
   contents: write   # needed to publish releases from tags
@@ -44,10 +46,14 @@ jobs:
           name: EDTrackerProTool
           path: EDTrackerProTool.exe
 
-      - name: Publish release (tags starting with v)
+      - name: Attach to release (tags starting with v)
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           zip "EDTrackerProTool-${GITHUB_REF_NAME}.zip" EDTrackerProTool.exe README.md ftfiles/OPENTRACK-NOTICE.txt
-          gh release create "$GITHUB_REF_NAME" "EDTrackerProTool-${GITHUB_REF_NAME}.zip" --title "$GITHUB_REF_NAME" --generate-notes
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "EDTrackerProTool-${GITHUB_REF_NAME}.zip" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "EDTrackerProTool-${GITHUB_REF_NAME}.zip" --title "$GITHUB_REF_NAME" --generate-notes
+          fi

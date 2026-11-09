@@ -12,7 +12,7 @@ A replacement for the EDTracker Pro configuration software, written from scratch
 ## Download
 
 Every push builds the exe automatically: see the **Actions** tab → latest run → *Artifacts*.
-Tagged versions (`v1.0.0`, `v1.1.0`, …) appear under **Releases** as a ready-to-run zip.
+Released versions (`v1.0.0`, `v1.1.0`, …) appear under **Releases** as a ready-to-run zip.
 
 ## Running
 
@@ -51,7 +51,7 @@ rsrc -manifest app.manifest -ico app.ico -arch amd64 -o rsrc_windows_amd64.syso
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-H windowsgui -s -w" -o EDTrackerProTool.exe .
 ```
 
-To publish a release: `git tag v1.1.0 && git push --tags`.
+To publish a release: on GitHub, **Releases → Draft a new release**, type a new tag such as `v1.1.0`, and **Publish**. The workflow builds the exe and attaches it to the release a minute later. (Pushing a `v*` tag from git does the same.)
 
 ## Code map
 
